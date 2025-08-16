@@ -1,9 +1,11 @@
 package com.baithak.assignment.repository;
 
-import com.baithak.assignment.entity.Places;
+import com.baithak.assignment.model.Place;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface PlacesRepository extends JpaRepository<Places,Long> {
+public interface PlacesRepository extends JpaRepository<Place,Long> {
+
+
 }

@@ -1,4 +1,4 @@
-package com.baithak.assignment.entity;
+package com.baithak.assignment.model;
 
 public enum TimeSlot {
     EARLY_MORNING,

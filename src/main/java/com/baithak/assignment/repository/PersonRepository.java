@@ -1,10 +1,10 @@
 package com.baithak.assignment.repository;
 
-import com.baithak.assignment.entity.Members;
+import com.baithak.assignment.model.Person;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 
 @Repository
-public interface MembersRepository extends JpaRepository<Members,Long> {
+public interface PersonRepository extends JpaRepository<Person,Long> {
 }
