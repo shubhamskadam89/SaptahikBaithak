@@ -1,9 +1,15 @@
 package com.baithak.assignment.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @Data
-public class AssignmentHistory {
+@RequiredArgsConstructor
+@AllArgsConstructor
+@Builder
+public class AssignmentResponseDto {
 
 
     private Long id;
@@ -15,5 +21,7 @@ public class AssignmentHistory {
     private String day;
 
     private String date;
+
+
 
 }

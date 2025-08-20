@@ -21,7 +21,7 @@ public class Place {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PlaceType type; // male / female
+    private Gender type; // male / female
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -32,9 +32,7 @@ public class Place {
     @Column(nullable = false, name = "time_slot")   // ✅ fix: map enum to SQL column
     private TimeSlot timeSlot;
 
-    public enum PlaceType {
-        MALE, FEMALE
-    }
+
 
 
 }

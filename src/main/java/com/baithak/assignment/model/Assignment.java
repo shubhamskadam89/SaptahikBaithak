@@ -23,12 +23,6 @@ public class Assignment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long assignmentId;
 
-    @Column(nullable = false)
-    private Integer year;
-
-    @Column(nullable = false)
-    private Integer weekNumber;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_id", nullable = false)
     private Place place;
@@ -39,6 +33,9 @@ public class Assignment {
 
     @Column(nullable = false)
     private Boolean isManual = false;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime baithakAt;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();

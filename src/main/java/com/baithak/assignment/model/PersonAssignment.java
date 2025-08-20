@@ -1,32 +1,38 @@
 package com.baithak.assignment.model;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 @Entity
-@Table(name = "Person_Place_History")
+@Table(name = "person_assignments")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@IdClass(PersonPlaceHistoryId.class)
-public class PersonPlaceHistory {
+public class PersonAssignment {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long assignmentId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "person_id", nullable = false)
     private Person person;
 
-    @Id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_id", nullable = false)
     private Place place;
 
     @Column(nullable = false)
-    private Integer lastYear;
+    private LocalDate meetingDate;   // actual date chosen
+
+    @Column(nullable = false, length = 20)
+    private String meetingDay;       // redundant but useful for reports
 
     @Column(nullable = false)
-    private Integer lastWeek;
+    private LocalDateTime createdAt; // audit trail
 }

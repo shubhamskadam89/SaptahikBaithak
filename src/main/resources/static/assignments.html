@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Baithak Assignments</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+<div class="max-w-5xl mx-auto p-6">
+    <header class="mb-6">
+        <h1 class="text-2xl font-bold">Baithak Assignments</h1>
+        <p class="text-sm text-gray-600">Manual scheduling for female representatives</p>
+    </header>
+
+    <!-- Alerts -->
+    <div id="alert" class="hidden mb-4 rounded border p-3"></div>
+
+    <div class="grid md:grid-cols-3 gap-6">
+        <!-- Left panel: selection -->
+        <section class="md:col-span-1 space-y-4">
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="font-semibold mb-2">Select Representative</h2>
+                <select id="personSelect" class="w-full border rounded px-3 py-2">
+                    <option value="">-- choose female representative --</option>
+                </select>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="font-semibold mb-2">Assign Meeting</h2>
+
+                <label class="text-sm block mb-1" for="dateInput">Date</label>
+                <input id="dateInput" type="date" class="w-full border rounded px-3 py-2 mb-3" />
+
+                <!-- dynamically show the day -->
+                <p id="dayOutput" class="text-gray-600 text-sm italic"></p>
+
+                <label class="text-sm block mb-1" for="placeSelect">Place</label>
+                <select id="placeSelect" class="w-full border rounded px-3 py-2 mb-4">
+                    <option value="">-- choose female place --</option>
+                </select>
+
+                <button id="assignBtn"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded">
+                    Assign
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="font-semibold mb-2">Tips</h2>
+                <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                    <li>History shows last 10 (oldest → newest).</li>
+                    <li>Choose an exact date; day label is auto-filled on backend.</li>
+                    <li>No auto-rotation — you’re in control.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Right panel: profile + history -->
+        <section class="md:col-span-2 space-y-4">
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="font-semibold">Profile</h2>
+                    <button id="refreshBtn"
+                            class="text-sm border px-3 py-1 rounded hover:bg-gray-50">
+                        Refresh
+                    </button>
+                </div>
+                <div id="profile" class="mt-3 text-sm text-gray-700">
+                    <div class="italic text-gray-500">Choose a representative to load profile…</div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="font-semibold mb-3">Last 10 Meetings (oldest → newest)</h2>
+                <div id="history" class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                        <tr class="text-left border-b">
+                            <th class="py-2 px-4 text-left">Date</th>
+                            <th class="py-2 px-4 text-left">Day</th>
+                            <th class="py-2 px-4 text-left">Place</th>
+                            <th class="py-2 px-4 text-left">Time Slot</th>
+                        </tr>
+                        </thead>
+                        <tbody id="historyBody">
+                        <tr><td colspan="3" class="py-3 text-gray-500 italic">No data</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+    <!-- Available places grid -->
+    <h2 class="text-lg font-semibold mt-6">Places Overview</h2>
+    <div id="placesGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4"></div>
+</div>
+
+<script>
+  const API = {
+    females: 'http://localhost:8080/users/v1/all/female',
+    femalePlaces: 'http://localhost:8080/places/v1/all/female',
+    history: (personId) => `http://localhost:8080/assignments/v1/person/${personId}/history`,
+    assign: (personId, placeId, date) =>
+            `http://localhost:8080/assignments/v1/person/${personId}/assign?placeId=${placeId}&date=${date}`,
+    overview: 'http://localhost:8080/assignments/v1/overview'
+  };
+
+  // ---- Elements ----
+  const personSelect = document.getElementById('personSelect');
+  const placeSelect  = document.getElementById('placeSelect');
+  const dateInput    = document.getElementById('dateInput');
+  const assignBtn    = document.getElementById('assignBtn');
+  const refreshBtn   = document.getElementById('refreshBtn');
+  const historyBody  = document.getElementById('historyBody');
+  const profileEl    = document.getElementById('profile');
+  const alertEl      = document.getElementById('alert');
+  const dayOutput    = document.getElementById("dayOutput");
+  const placesGrid   = document.getElementById("placesGrid");
+  
+
+  // ---- State ----
+  let persons = [];
+  let places  = [];
+  let selectedPerson = null;
+  let currentHistory = [];
+  let overview = [];
+
+
+  // ---- Helpers ----
+
+  async function loadPlacesOverview() {
+    try {
+      const overview = await fetchJSON(API.overview);
+      renderPlacesOverview(overview);
+    } catch (e) {
+      showAlert('error', 'Failed to load places overview: ' + e.message);
+    }
+  }
+  function showAlert(type, msg) {
+    const styles = {
+      success: 'bg-green-50 border-green-300 text-green-800',
+      error:   'bg-red-50 border-red-300 text-red-800',
+      info:    'bg-blue-50 border-blue-300 text-blue-800'
+    };
+    alertEl.className = `mb-4 rounded border p-3 ${styles[type] || styles.info}`;
+    alertEl.textContent = msg;
+    alertEl.classList.remove('hidden');
+    setTimeout(() => alertEl.classList.add('hidden'), 3500);
+  }
+
+  function fmtDate(iso) {
+    try {
+      const d = new Date(iso + 'T00:00:00');
+      return d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+    } catch {
+      return iso;
+    }
+  }
+
+  function weekdayFromDate(dateStr) {
+    return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+  }
+
+  function renderProfile() {
+    if (!selectedPerson) {
+      profileEl.innerHTML = '<div class="italic text-gray-500">Choose a representative…</div>';
+      return;
+    }
+    profileEl.innerHTML = `
+      <div class="space-y-1">
+        <div><span class="font-medium">Name:</span> ${selectedPerson.name}</div>
+        <div><span class="font-medium">Gender:</span> ${selectedPerson.gender}</div>
+        <div><span class="font-medium">Person ID:</span> ${selectedPerson.personId}</div>
+      </div>
+    `;
+  }
+  function renderPlacesOverview(overview) {
+    placesGrid.innerHTML = overview.map(p => `
+      <div class="p-4 border rounded shadow-sm text-center ${p.personName ? 'bg-red-100' : 'bg-green-100'}">
+        <h3 class="font-bold">${p.placeName}</h3>
+        <p class="text-sm">${p.meetingDay} — ${p.timeSlot}</p>
+        <p class="text-xs mt-2">${p.meetingDate ? fmtDate(p.meetingDate) : '-'}</p>
+        <p class="text-xs">${p.personName ? 'Assigned: ' + p.personName : 'Available'}</p>
+      </div>
+    `).join('');
+  }
+
+  function renderHistory(rows) {
+    if (!rows || rows.length === 0) {
+      historyBody.innerHTML = '<tr><td colspan="4" class="py-3 text-gray-500 italic">No history yet</td></tr>';
+      return;
+    }
+    const ordered = [...rows].reverse();
+    historyBody.innerHTML = ordered.map(r => `
+      <tr class="border-b last:border-0">
+        <td class="py-2 pr-4">${fmtDate(r.meetingDate)}</td>
+        <td class="py-2 pr-4">${r.meetingDay}</td>
+        <td class="py-2 pr-4">${r.placeName || '-'}</td>
+        <td class="py-2 pr-4">${r.timeSlot || '-'}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderPlacesDropdown() {
+    // filter: remove places already assigned to this female
+    const assignedIds = new Set(currentHistory.map(h => h.placeId));
+    const available = places.filter(pl => !assignedIds.has(pl.placeId));
+
+    placeSelect.innerHTML = '<option value="">-- choose female place --</option>' +
+      available.map(pl => `<option value="${pl.placeId}">${pl.name} — ${pl.meetingDay} (${pl.timeSlot})</option>`).join('');
+  }
+
+ function renderHistoryPlacesGrid() {
+  placesGrid.innerHTML = places.map(place => {
+    const assignment = currentHistory.find(h => h.placeId === place.placeId);
+    return `
+      <div class="p-4 border rounded shadow-sm text-center ${assignment ? 'bg-red-100' : 'bg-green-100'}">
+        <h3 class="font-bold">${place.name}</h3>
+        <p class="text-sm">${place.meetingDay}</p>
+        <p class="text-xs mt-2">
+          ${assignment ? 'Assigned to ' + assignment.personName : 'Available'}
+        </p>
+      </div>
+    `;
+  }).join('');
+}
+
+  async function fetchJSON(url, opts) {
+    const res = await fetch(url, opts);
+    if (!res.ok) {
+      const text = await res.text().catch(()=> '');
+      throw new Error(`${res.status} ${res.statusText}: ${text}`);
+    }
+    return res.json();
+  }
+
+  async function loadFemales() {
+    try {
+      persons = await fetchJSON(API.females);
+      persons = persons.filter(p => p.gender === 'FEMALE');
+      personSelect.innerHTML = '<option value="">-- choose female representative --</option>' +
+        persons.map(p => `<option value="${p.personId}">${p.name}</option>`).join('');
+    } catch (e) {
+      showAlert('error', 'Failed to load female representatives: ' + e.message);
+    }
+  }
+
+  async function loadFemalePlaces() {
+    try {
+      places = await fetchJSON(API.femalePlaces);
+    } catch (e) {
+      showAlert('error', 'Failed to load places: ' + e.message);
+    }
+  }
+
+  async function loadHistory(personId) {
+    try {
+      const rows = await fetchJSON(API.history(personId));
+      renderHistory(rows);
+      renderPlacesDropdown();
+      renderHistoryPlacesGrid();
+    } catch (e) {
+      renderHistory([]);
+      renderPlacesDropdown();
+      renderHistoryPlacesGrid();
+      showAlert('error', 'Failed to load history: ' + e.message);
+    }
+  }
+
+  async function assign() {
+    if (!selectedPerson) {
+      showAlert('error', 'Choose a representative first.');
+      return;
+    }
+    const placeId = placeSelect.value;
+    const dateVal = dateInput.value;
+    if (!dateVal || !placeId) {
+      showAlert('error', 'Select both date and place.');
+      return;
+    }
+
+    // check same weekday rule
+    const chosenDay = weekdayFromDate(dateVal);
+    if (currentHistory.some(h => h.meetingDay === chosenDay)) {
+      showAlert('error', `Already has a meeting on ${chosenDay}.`);
+      return;
+    }
+
+    try {
+      await fetchJSON(API.assign(selectedPerson.personId, placeId, dateVal), { method: 'POST' });
+      showAlert('success', 'Assignment saved.');
+      await loadHistory(selectedPerson.personId);
+    } catch (e) {
+      showAlert('error', 'Failed to save assignment: ' + e.message);
+    }
+  }
+
+  // ---- Event wiring ----
+  dateInput.addEventListener("change", () => {
+    if (dateInput.value) {
+      const date = new Date(dateInput.value);
+      const options = { weekday: 'long' };
+      const day = date.toLocaleDateString('en-US', options);
+      dayOutput.textContent = `Day: ${day}`;
+    } else {
+      dayOutput.textContent = "";
+    }
+  });
+
+  personSelect.addEventListener('change', async (e) => {
+    const id = e.target.value;
+    selectedPerson = persons.find(p => String(p.personId) === String(id));
+    renderProfile();
+    if (selectedPerson) {
+      await loadHistory(selectedPerson.personId);
+    } else {
+      renderHistory([]);
+      renderPlacesDropdown();
+      rrenderHistoryPlacesGrid();
+    }
+  });
+
+  refreshBtn.addEventListener('click', async () => {
+    if (selectedPerson) {
+      await loadHistory(selectedPerson.personId);
+      showAlert('info', 'Refreshed.');
+    }
+  });
+
+  assignBtn.addEventListener('click', assign);
+
+  // ---- Boot ----
+  (async function init() {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  dateInput.value = `${yyyy}-${mm}-${dd}`;
+
+  await Promise.all([loadFemales(), loadFemalePlaces(), loadPlacesOverview()]);
+})();
+</script>
+
+</body>
+</html>

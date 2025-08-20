@@ -1,9 +1,16 @@
 package com.baithak.assignment.service;
 
+import com.baithak.assignment.dto.AssignmentResponseDto;
+import jakarta.transaction.Transactional;
 
-import org.springframework.stereotype.Service;
+import java.util.List;
 
-@Service
-public class AssignmentService {
+public interface AssignmentService {
+
+    void assignWeeklyBaithaks();
+
+    List<AssignmentResponseDto> assignFivePlaces();
+
+    AssignmentResponseDto assignManually(String placeName, String personName, String dayOfWeek);
 
 }
