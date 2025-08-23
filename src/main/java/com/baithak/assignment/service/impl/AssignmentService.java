@@ -82,10 +82,19 @@ public class AssignmentService {
     public List<PlaceOverviewDto> getPlacesOverview() {
         List<Place> allPlaces = placesRepo.findAll();
 
+        // calculate next week's date range
+        LocalDate today = LocalDate.now();
+        LocalDate startOfNextWeek = today.with(java.time.DayOfWeek.MONDAY).plusWeeks(1);
+        LocalDate endOfNextWeek = startOfNextWeek.plusDays(6);
+
         return allPlaces.stream().map(place -> {
-            // check if this place has a latest assignment
+            // find the latest assignment for this place in next week
             PersonAssignment latest = assignmentRepo
-                    .findTopByPlaceOrderByMeetingDateDesc(place)
+                    .findTopByPlaceAndMeetingDateBetweenOrderByMeetingDateDesc(
+                            place,
+                            startOfNextWeek,
+                            endOfNextWeek
+                    )
                     .orElse(null);
 
             return PlaceOverviewDto.builder()
@@ -99,5 +108,34 @@ public class AssignmentService {
                     .build();
         }).toList();
     }
+
+    public AssignmentDto updateMeetingPerson(Long assignmentId, Long personId) {
+        log.info("Updating person for assignmentId={} to personId={}", assignmentId, personId);
+
+        PersonAssignment assignment = assignmentRepo.findById(assignmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Assignment not found"));
+
+        Person person = personRepo.findById(personId)
+                .orElseThrow(() -> new IllegalArgumentException("Person not found"));
+
+        assignment.setPerson(person);
+
+        PersonAssignment updated = assignmentRepo.save(assignment);
+        return toDto(updated);
+    }
+
+    public AssignmentDto updateMeetingDate(Long assignmentId, LocalDate date) {
+        log.info("Updating meeting date for assignmentId={} to {}", assignmentId, date);
+
+        PersonAssignment assignment = assignmentRepo.findById(assignmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Assignment not found"));
+
+        assignment.setMeetingDate(date);
+        assignment.setMeetingDay(date.getDayOfWeek().toString()); // keep consistent
+
+        PersonAssignment updated = assignmentRepo.save(assignment);
+        return toDto(updated);
+    }
+
 
 }

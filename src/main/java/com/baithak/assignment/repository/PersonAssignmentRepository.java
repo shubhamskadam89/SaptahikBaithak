@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,6 +24,9 @@ public interface PersonAssignmentRepository extends JpaRepository<PersonAssignme
     List<PersonAssignment> findByPerson_PersonIdOrderByMeetingDateAsc(Long personId);
 
     // find the latest assignment for a given place
-    Optional<PersonAssignment> findTopByPlaceOrderByMeetingDateDesc(Place place);
-
+    Optional<PersonAssignment> findTopByPlaceAndMeetingDateBetweenOrderByMeetingDateDesc(
+            Place place,
+            LocalDate startDate,
+            LocalDate endDate
+    );
 }
