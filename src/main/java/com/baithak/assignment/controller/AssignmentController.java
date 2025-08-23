@@ -16,6 +16,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/assignments")
+@CrossOrigin("*")
 public class AssignmentController {
 
     private final AssignmentService assignmentService;
@@ -41,4 +42,26 @@ public class AssignmentController {
     public ResponseEntity<List<PlaceOverviewDto>> getOverview() {
         return ResponseEntity.ok(assignmentService.getPlacesOverview());
     }
+
+    // Update only person
+    @PutMapping("/v1/assignment/{assignmentId}/person/{personId}")
+    public ResponseEntity<AssignmentDto> updateMeetingPerson(
+            @PathVariable Long assignmentId,
+            @PathVariable Long personId) {
+
+        log.info("Updating person for assignmentId={} to personId={}", assignmentId, personId);
+        return ResponseEntity.ok(assignmentService.updateMeetingPerson(assignmentId, personId));
+    }
+
+    // Update only date
+    @PutMapping("/v1/assignment/{assignmentId}/date")
+    public ResponseEntity<AssignmentDto> updateMeetingDate(
+            @PathVariable Long assignmentId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+
+        log.info("Updating meeting date for assignmentId={} to {}", assignmentId, date);
+        return ResponseEntity.ok(assignmentService.updateMeetingDate(assignmentId, date));
+    }
+
+
 }
